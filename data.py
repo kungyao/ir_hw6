@@ -44,8 +44,8 @@ class CorpusSet(Dataset):
         if type(content) == float and math.isnan(content):
             content = " "
         # if set return_tensors='pt', the output data size will become [1, n]
-        # token_ids = self.tokenizer.encode(query, content)
-        tokens = self.tokenizer(f'{query}</s>{content}')
+        # token_ids = self.tokenizer.encode(query, content, max_length=512)
+        tokens = self.tokenizer(f'{query}</s>{content}', max_length=512)
         # split data and to tensor
         token_ids = torch.tensor(tokens['input_ids'])
         atten_mask = torch.tensor(tokens['attention_mask'])
