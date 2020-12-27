@@ -37,7 +37,8 @@ if __name__ == '__main__':
     # testloader = DataLoader(testset, batch_size=1, collate_fn=collate_fn, num_workers=4)
 
     model.to(device)
-    for _ in range(args.epoch):
+    for ep in range(args.epoch):
+        print(f'training epoch {ep}')
         for i, data in enumerate(trainloader):
             token_ids = data[0].to(device)
             atten_masks = data[1].to(device)
