@@ -36,9 +36,11 @@ if __name__ == '__main__':
     # testset = CorpusSet(tokenizer, docs, train, neg_doc=neg_train, mode='test')
     # testloader = DataLoader(testset, batch_size=1, collate_fn=collate_fn, num_workers=4)
 
+    print_thres = 100
     model.to(device)
     for ep in range(args.epoch):
         print(f'training epoch {ep}')
+        total_loss = 0
         for i, data in enumerate(trainloader):
             token_ids = data[0].to(device)
             atten_masks = data[1].to(device)
@@ -46,7 +48,11 @@ if __name__ == '__main__':
 
             res = model(input_ids=token_ids, attention_mask=atten_masks, labels=labels)
 
-            loss = res.loss
-            logits = res.logits
+            total_loss += res.loss
+            # loss = res.loss
+            # logits = res.logits
+            if i % print_thres == 99:
+                print(f'epoch {ep}, batch {i+1}, loss {total_loss / print_thres}')
+                total_loss = 0
         torch.save(model, os.path.join(args.output, f'epoch_{epoch}.mdl'))
 
