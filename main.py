@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from data import CorpusSet, collate_fn, get_csv_data
-from model import get_roberta_model_and_tokenizer
+from model import get_albert_model_and_tokenizer
 
 def get_args():
     parser = argparse.ArgumentParser(description='', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -27,11 +27,14 @@ if __name__ == '__main__':
     docs, test, train, neg_train = get_csv_data()
 
     # get model
-    model, tokenizer = get_roberta_model_and_tokenizer()
+    model, tokenizer = get_albert_model_and_tokenizer()
+
+    optim = torch.optim.Adam(model.parameters(), lr=3e-5)
+    scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=3, gamma=0.1)
 
     # construct data loader
     trainset = CorpusSet(tokenizer, docs, train, neg_doc=neg_train, mode='train')
-    trainloader = DataLoader(trainset, batch_size=args.batch_size, collate_fn=collate_fn, num_workers=4, shuffle=True)
+    trainloader = DataLoader(trainset, batch_size=args.batch_size, collate_fn=collate_fn, shuffle=True)
 
     # testset = CorpusSet(tokenizer, docs, train, neg_doc=neg_train, mode='test')
     # testloader = DataLoader(testset, batch_size=1, collate_fn=collate_fn, num_workers=4)
@@ -43,10 +46,15 @@ if __name__ == '__main__':
         total_loss = 0
         for i, data in enumerate(trainloader):
             token_ids = data[0].to(device)
-            atten_masks = data[1].to(device)
-            labels = data[2].to(device)
+            token_type_ids = data[1].to(device)
+            atten_masks = data[2].to(device)
+            labels = data[3].to(device)
 
-            res = model(input_ids=token_ids, attention_mask=atten_masks, labels=labels)
+            res = model(input_ids=token_ids, token_type_ids=token_type_ids, attention_mask=atten_masks, labels=labels)
+
+            optim.zero_grad()
+            res.loss.backward()
+            optim.step()
 
             total_loss += res.loss
             # loss = res.loss

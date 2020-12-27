@@ -43,27 +43,38 @@ class CorpusSet(Dataset):
         content = self.docs[docName]
         if type(content) == float and math.isnan(content):
             content = " "
-        # if set return_tensors='pt', the output data size will become [1, n]
-        # token_ids = self.tokenizer.encode(query, content, max_length=512)
-        tokens = self.tokenizer(f'{query}</s>{content}', max_length=512, truncation=True)
-        # split data and to tensor
-        token_ids = torch.tensor(tokens['input_ids'])
-        atten_mask = torch.tensor(tokens['attention_mask'])
-        return token_ids, atten_mask, label
+        content = 'of statement by Bishop Samuel Ruiz </F> Garcia to unidentified domestic and foreign reporters at the San Cristobal de las Casas Cathedral on 27 February] [Text] Good evening to all the domestic and international sisters and brothers of the press, radio, and television media. Events that occur outside the discussion table influence differently those who are sitting at this table and on those who are abroad. Although we cannot say news has been lacking, it has certainly influenced the mood of the talks. For example, the news on what has been happening in Altamirano has influenced our work. Even if those events would not have occurred and we would not have known of the steps taken to achieve greater peace, it would have been difficult for the parties at the table to continue to progress without feeling there was a disturbing external pressure.of statement by Bishop Samuel Ruiz </F> Garcia to unidentified domestic and foreign reporters at the San Cristobal de las Casas Cathedral on 27 February] [Text] Good evening to all the domestic and international sisters and brothers of the press, radio, and television media. Events that occur outside the discussion table influence differently those who are sitting at this table and on those who are abroad. Although we cannot say news has been lacking, it has certainly influenced the mood of the talks. For example, the news on what has been happening in Altamirano has influenced our work. Even if those events would not have occurred and we would not have known of the steps taken to achieve greater peace, it would have been difficult for the parties at the table to continue to progress without feeling there was a disturbing external pressure.of statement by Bishop Samuel Ruiz </F> Garcia to unidentified domestic and foreign reporters at the San Cristobal de las Casas Cathedral on 27 February] [Text] Good evening to all the domestic and international sisters and brothers of the press, radio, and television media. Events that occur outside the discussion table influence differently those who are sitting at this table and on those who are abroad. Although we cannot say news has been lacking, it has certainly influenced the mood of the talks. For example, the news on what has been happening in Altamirano has influenced our work. Even if those events would not have occurred and we would not have known of the steps taken to achieve greater peace, it would have been difficult for the parties at the table to continue to progress without feeling there was a disturbing external pressure.of statement by Bishop Samuel Ruiz </F> Garcia to unidentified domestic and foreign reporters at the San Cristobal de las Casas Cathedral on 27 February] [Text] Good evening to all the domestic and international sisters and brothers of the press, radio, and television media. Events that occur outside the discussion table influence differently those who are sitting at this table and on those who are abroad. Although we cannot say news has been lacking, it has certainly influenced the mood of the talks. For example, the news on what has been happening in Altamirano has influenced our work. Even if those events would not have occurred and we would not have known of the steps taken to achieve greater peace, it would have been difficult for the parties at the table to continue to progress without feeling there was a disturbing external pressure.of statement by Bishop Samuel Ruiz </F> Garcia to unidentified domestic and foreign reporters at the San Cristobal de las Casas Cathedral on 27 February] [Text] Good evening to all the domestic and international sisters and brothers of the press, radio, and television media. Events that occur outside the discussion table influence differently those who are sitting at this table and on those who are abroad. Although we cannot say news has been lacking, it has certainly influenced the mood of the talks. For example, the news on what has been happening in Altamirano has influenced our work. Even if those events would not have occurred and we would not have known of the steps taken to achieve greater peace, it would have been difficult for the parties at the table to continue to progress without feeling there was a disturbing external pressure.of statement by Bishop Samuel Ruiz </F> Garcia to unidentified domestic and foreign reporters at the San Cristobal de las Casas Cathedral on 27 February] [Text] Good evening to all the domestic and international sisters and brothers of the press, radio, and television media. Events that occur outside the discussion table influence differently those who are sitting at this table and on those who are abroad. Although we cannot say news has been lacking, it has certainly influenced the mood of the talks. For example, the news on what has been happening in Altamirano has influenced our work. Even if those events would not have occurred and we would not have known of the steps taken to achieve greater peace, it would have been difficult for the parties at the table to continue to progress without feeling there was a disturbing external pressure.of statement by Bishop Samuel Ruiz </F> Garcia to unidentified domestic and foreign reporters at the San Cristobal de las Casas Cathedral on 27 February] [Text] Good evening to all the domestic and international sisters and brothers of the press, radio, and television media. Events that occur outside the discussion table influence differently those who are sitting at this table and on those who are abroad. Although we cannot say news has been lacking, it has certainly influenced the mood of the talks. For example, the news on what has been happening in Altamirano has influenced our work. Even if those events would not have occurred and we would not have known of the steps taken to achieve greater peace, it would have been difficult for the parties at the table to continue to progress without feeling there was a disturbing external pressure.of statement by Bishop Samuel Ruiz </F> Garcia to unidentified domestic and foreign reporters at the San Cristobal de las Casas Cathedral on 27 February] [Text] Good evening to all the domestic and international sisters and brothers of the press, radio, and television media. Events that occur outside the discussion table influence differently those who are sitting at this table and on those who are abroad. Although we cannot say news has been lacking, it has certainly influenced the mood of the talks. For example, the news on what has been happening in Altamirano has influenced our work. Even if those events would not have occurred and we would not have known of the steps taken to achieve greater peace, it would have been difficult for the parties at the table to continue to progress without feeling there was a disturbing external pressure.of statement by Bishop Samuel Ruiz </F> Garcia to unidentified domestic and foreign reporters at the San Cristobal de las Casas Cathedral on 27 February] [Text] Good evening to all the domestic and international sisters and brothers of the press, radio, and television media. Events that occur outside the discussion table influence differently those who are sitting at this table and on those who are abroad. Although we cannot say news has been lacking, it has certainly influenced the mood of the talks. For example, the news on what has been happening in Altamirano has influenced our work. Even if those events would not have occurred and we would not have known of the steps taken to achieve greater peace, it would have been difficult for the parties at the table to continue to progress without feeling there was a disturbing external pressure.of statement by Bishop Samuel Ruiz </F> Garcia to unidentified domestic and foreign reporters at the San Cristobal de las Casas Cathedral on 27 February] [Text] Good evening to all the domestic and international sisters and brothers of the press, radio, and television media. Events that occur outside the discussion table influence differently those who are sitting at this table and on those who are abroad. Although we cannot say news has been lacking, it has certainly influenced the mood of the talks. For example, the news on what has been happening in Altamirano has influenced our work. Even if those events would not have occurred and we would not have known of the steps taken to achieve greater peace, it would have been difficult for the parties at the table to continue to progress without feeling there was a disturbing external pressure.'
+
+        word_pieces = ['[CLS]']
+        qtoken = self.tokenizer.tokenize(query)
+        word_pieces += qtoken + ["[SEP]"]
+        len_a = len(word_pieces)
+
+        dtoken = self.tokenizer.tokenize(content)
+        word_pieces += dtoken
+        if len(word_pieces) >= 512:
+            word_pieces = word_pieces[:511]
+        word_pieces += ["[SEP]"]
+        len_b = len(word_pieces) - len_a
+
+        token_ids = torch.tensor(self.tokenizer.convert_tokens_to_ids(word_pieces))
+        token_type_ids = torch.tensor([0] * len_a + [1] * len_b, dtype=torch.int64)
+        return token_ids, token_type_ids, label
 
 def collate_fn(batches):
     token_ids = [d[0] for d in batches]
-    atten_masks = [d[1] for d in batches]
+    token_type_ids = [d[1] for d in batches]
     if batches[0][2] is not None:
         labels = torch.tensor([d[2] for d in batches])
     else:
         labels = None
     # padding
     token_ids = pad_sequence(token_ids, batch_first=True)
-    atten_masks = pad_sequence(atten_masks, batch_first=True)
-    # atten_masks = torch.zeros(token_ids.shape, dtype=torch.int64)
-    # atten_masks = atten_masks.masked_fill(token_ids != 1, 1)
-    return (token_ids, atten_masks, labels)
+    token_type_ids = pad_sequence(token_type_ids, batch_first=True)
+    # gen attention mask
+    atten_masks = torch.zeros(token_ids.shape, dtype=torch.int64)
+    atten_masks = atten_masks.masked_fill(token_ids != 0, 1)
+    return (token_ids, token_type_ids, atten_masks, labels)
 
 # @brief
 # @param doc    document csv data
@@ -142,21 +153,7 @@ if __name__ == '__main__':
     docs, test, train, neg_train = get_csv_data()
 
     # generate_negative_data(docs, train)
-        
-    # from transformers import RobertaTokenizer
-    # tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
-
-    # max_length = 0
-    # for i, content in enumerate(docs['doc_text']):
-    #     if type(content) == float and math.isnan(content):
-    #         print("AAAAAAAAA")
-    #         break
-    #     tmp = len(tokenizer.encode(content))
-    #     if tmp > max_length:
-    #         max_length = tmp
-    #     # print(tmp)
-    # print(f'max length : {max_length}')
-
+    
     # df = pd.DataFrame({'a': ['red', 'yellow', 'blue'], 'b': [0.5, 0.25, 0.125]})
     # print(df.values)
     # print(df.values.tolist())
