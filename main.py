@@ -5,12 +5,12 @@ import torch
 from torch.utils.data import DataLoader
 
 from data import CorpusSet, collate_fn, get_csv_data
-from model import get_albert_model_and_tokenizer
+from model import get_bert_model_and_tokenizer
 
 def get_args():
     parser = argparse.ArgumentParser(description='', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-ep', '--epoch', type=int, default=5, dest='epoch')
-    parser.add_argument('-bs', '--batch_size', type=int, default=1, dest='batch_size')
+    parser.add_argument('-ep', '--epoch', type=int, default=10, dest='epoch')
+    parser.add_argument('-bs', '--batch_size', type=int, default=2, dest='batch_size')
     parser.add_argument('-o', '--output', type=str, default='./models', dest='output')
     return parser.parse_args()
 
@@ -27,14 +27,14 @@ if __name__ == '__main__':
     docs, test, train = get_csv_data()
 
     # get model
-    model, tokenizer = get_albert_model_and_tokenizer()
+    model, tokenizer = get_bert_model_and_tokenizer()
 
     optim = torch.optim.Adam(model.parameters(), lr=3e-5)
     scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=3, gamma=0.1)
 
     # construct data loader
     trainset = CorpusSet(tokenizer, docs, train, mode='train')
-    trainloader = DataLoader(trainset, batch_size=args.batch_size, collate_fn=collate_fn, shuffle=True)
+    trainloader = DataLoader(trainset, batch_size=args.batch_size, collate_fn=collate_fn)
 
     print_thres = 100
     model.to(device)
