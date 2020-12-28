@@ -24,7 +24,7 @@ if __name__ == '__main__':
     print(f'Use {device} to training')
 
     # load data
-    docs, test, train, neg_train = get_csv_data()
+    docs, test, train = get_csv_data()
 
     # get model
     model, tokenizer = get_albert_model_and_tokenizer()
@@ -33,13 +33,10 @@ if __name__ == '__main__':
     scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=3, gamma=0.1)
 
     # construct data loader
-    trainset = CorpusSet(tokenizer, docs, train, neg_doc=neg_train, mode='train')
+    trainset = CorpusSet(tokenizer, docs, train, mode='train')
     trainloader = DataLoader(trainset, batch_size=args.batch_size, collate_fn=collate_fn, shuffle=True)
 
-    # testset = CorpusSet(tokenizer, docs, train, neg_doc=neg_train, mode='test')
-    # testloader = DataLoader(testset, batch_size=1, collate_fn=collate_fn, num_workers=4)
-
-    print_thres = 100
+    print_thres = 100 - 1
     model.to(device)
     for ep in range(args.epoch):
         print(f'training epoch {ep}')
@@ -59,7 +56,7 @@ if __name__ == '__main__':
             total_loss += res.loss
             # loss = res.loss
             # logits = res.logits
-            if i % print_thres == 99:
+            if i != 0 and i % print_thres == 0:
                 print(f'epoch {ep}, batch {i+1}, loss {total_loss / print_thres}')
                 total_loss = 0
         torch.save(model, os.path.join(args.output, f'epoch_{ep}.mdl'))

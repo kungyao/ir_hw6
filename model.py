@@ -1,13 +1,19 @@
 
-def get_albert_model_and_tokenizer():
+def get_albert_model_and_tokenizer(ifModel=True):
     from transformers import AlbertTokenizer, AlbertForSequenceClassification
-    model = AlbertForSequenceClassification.from_pretrained('albert-base-v2')
+    if ifModel:
+        model = AlbertForSequenceClassification.from_pretrained('albert-base-v2')
+    else:
+        model = None
     tokenizer = AlbertTokenizer.from_pretrained('albert-base-v2')
     return model, tokenizer
 
-def get_roberta_model_and_tokenizer():
+def get_roberta_model_and_tokenizer(ifModel=True):
     from transformers import RobertaTokenizer, RobertaForSequenceClassification
-    model = RobertaForSequenceClassification.from_pretrained('roberta-base')
+    if ifModel:
+        model = RobertaForSequenceClassification.from_pretrained('roberta-base')
+    else:
+        model = None
     tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
     return model, tokenizer
 

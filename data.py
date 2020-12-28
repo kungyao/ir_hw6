@@ -8,42 +8,44 @@ from torch.nn.utils.rnn import pad_sequence
 class CorpusSet(Dataset):
     # @param docs   dictionary type of data, docs[document name] -> document content
     # @param mode   train or test
-    def __init__(self, tokenizer, docs, queryData, neg_doc=None, mode='train'):
+    def __init__(self, tokenizer, docs, queryData, topx=1000, mode='train'):
         self.docs = docs
         # pair data : query index, doeumet name, label
         self.data = []
         data = queryData
         self.querys = []
         for i in range(len(data)):
-            self.querys.append(data[i]['query_text'])
+            self.querys.append((data[i]['query_id'], data[i]['query_text']))
             if mode=='train':
                 pos_doc_names = data[i]['pos_doc_ids']
                 pos_data_size = len(pos_doc_names)
                 for doc_name in pos_doc_names:
                     self.data.append((i, doc_name, 1))
-                if neg_doc is not None:
-                    neg_doc_names = neg_doc[i]['neg_doc_ids']
-                    for j in range(pos_data_size):
-                        self.data.append((i, neg_doc_names[j], 0))
+                neg_doc_names = data[i]['neg_doc_ids']
+                for j in range(pos_data_size):
+                    self.data.append((i, neg_doc_names[j], 0))
             else:
-                for key in docs:
-                    self.data.append((i, key))
+                for doc_name in data[i]['bm25_top1000']:
+                    self.data.append((i, doc_name))
         self.len = len(self.data)
         self.mode = mode
         self.tokenizer = tokenizer
     def __len__(self):
         return self.len
+    def get_query_doc_name(self, index):
+        qIdx, docName = self.data[index][:2]
+        return qIdx, self.querys[qIdx][0], docName
     def __getitem__(self, index):
         if self.mode=='train':
             qIdx, docName, label = self.data[index]
         else:
             qIdx, docName = self.data[index]
             label = None
-        query = self.querys[qIdx]
+        query = self.querys[qIdx][1]
         content = self.docs[docName]
         if type(content) == float and math.isnan(content):
             content = " "
-            
+
         word_pieces = ['[CLS]']
         qtoken = self.tokenizer.tokenize(query)
         word_pieces += qtoken + ["[SEP]"]
@@ -75,7 +77,7 @@ def collate_fn(batches):
     atten_masks = atten_masks.masked_fill(token_ids != 0, 1)
     return (token_ids, token_type_ids, atten_masks, labels)
 
-# @brief
+# @brief generate negative from all document that do not in positive doc
 # @param doc    document csv data
 # @param train  training csv data
 def generate_negative_data(doc, train):
@@ -112,22 +114,23 @@ def get_csv_data():
     #     { 
     #         query_id : str, 
     #         query_text : str, 
-    #         bm25_top1000 : [], 
-    #         bm25_top1000_scores : []
+    #         bm25_top1000 : [str], 
+    #         bm25_top1000_scores : [float]
     #     },
     # ]
     test = pd.read_csv('./ntust-ir2020-homework6/test_queries.csv', header=0)
     test = test.to_dict('records')
     for i in range(len(test)):
         test[i]['bm25_top1000'] = test[i]['bm25_top1000'].split(' ')
-        test[i]['bm25_top1000_scores'] = test[i]['bm25_top1000_scores'].split(' ')
+        tmpList = test[i]['bm25_top1000_scores'].split(' ')
+        test[i]['bm25_top1000_scores'] = [float(s) for s in tmpList]
     # [
     #     { 
     #         query_id : str, 
     #         query_text : str, 
-    #         pos_doc_ids : [], 
-    #         bm25_top1000 : [], 
-    #         bm25_top1000_scores : []
+    #         pos_doc_ids : [str], 
+    #         bm25_top1000 : [str], 
+    #         bm25_top1000_scores : [float]
     #     },
     # ]
     train = pd.read_csv('./ntust-ir2020-homework6/train_queries.csv', header=0)
@@ -135,21 +138,13 @@ def get_csv_data():
     for i in range(len(train)):
         train[i]['pos_doc_ids'] = train[i]['pos_doc_ids'].split(' ')
         train[i]['bm25_top1000'] = train[i]['bm25_top1000'].split(' ')
-        train[i]['bm25_top1000_scores'] = train[i]['bm25_top1000_scores'].split(' ')
-    # [
-    #     {
-    #         query_id : str,
-    #         neg_doc_ids : []
-    #     },
-    # ]
-    neg_train = pd.read_csv('./ntust-ir2020-homework6/negative_data.csv', header=0)
-    neg_train = neg_train.to_dict('records')
-    for i in range(len(neg_train)):
-        neg_train[i]['neg_doc_ids'] = neg_train[i]['neg_doc_ids'].split(' ')
-    return docs, test, train, neg_train
+        tmpList = train[i]['bm25_top1000_scores'].split(' ')
+        train[i]['bm25_top1000_scores'] = [float(s) for s in tmpList]
+        train[i]['neg_doc_ids'] = [name for name in train[i]['bm25_top1000'] if name not in train[i]['pos_doc_ids']]
+    return docs, test, train
 
 if __name__ == '__main__':
-    docs, test, train, neg_train = get_csv_data()
+    docs, test, train = get_csv_data()
 
     # generate_negative_data(docs, train)
     
@@ -166,3 +161,10 @@ if __name__ == '__main__':
 
     # data = next(iter(trainloader))
     # print(data)
+
+    print('train---------------------')
+    for i in range(len(train)):
+        for pos_id in train[i]['pos_doc_ids']:
+            if pos_id not in train[i]['bm25_top1000']:
+                print(train[i]['query_id'], pos_id)
+                break
