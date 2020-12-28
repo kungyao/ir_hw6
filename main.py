@@ -62,5 +62,5 @@ if __name__ == '__main__':
             if i % print_thres == 99:
                 print(f'epoch {ep}, batch {i+1}, loss {total_loss / print_thres}')
                 total_loss = 0
-        torch.save(model, os.path.join(args.output, f'epoch_{epoch}.mdl'))
+        torch.save(model, os.path.join(args.output, f'epoch_{ep}.mdl'))
 
