@@ -43,7 +43,7 @@ def get_final_result(args, docs, test, train, alpha=2):
     
     # to csv
     df = pd.DataFrame(output)
-    df.to_csv('./ntust-ir2020-homework6/result.csv', index=False)
+    df.to_csv(f'./ntust-ir2020-homework6/result_{args.test}.csv', index=False)
 
 def test_alpha_by_use_map(args, docs, test, train):
     br = prepare_bert_result()
@@ -104,7 +104,7 @@ def predict_from_model(args, docs, test, train):
                 resultList['doc_scores'].append(' '.join(rankStr))
                 rank = [0] * topx
     df = pd.DataFrame(resultList)
-    df.to_csv('./ntust-ir2020-homework6/bert_result.csv', index=False)
+    df.to_csv(f'./ntust-ir2020-homework6/bert_result_{args.test}.csv', index=False)
 
 def get_args():
     parser = argparse.ArgumentParser(description='', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
