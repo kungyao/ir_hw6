@@ -8,8 +8,8 @@ from data import CorpusSet, collate_fn, get_csv_data
 from model import get_albert_model_and_tokenizer
 from utils import mean_average_precision
 
-def prepare_bert_result():
-    br = pd.read_csv('./ntust-ir2020-homework6/bert_result.csv', header=0)
+def prepare_bert_result(test_type):
+    br = pd.read_csv(f'./ntust-ir2020-homework6/bert_result_{test_type}.csv', header=0)
     br = br.to_dict('records')
     for i in range(len(br)):
         br[i]['doc_ids'] = br[i]['doc_ids'].split(' ')
@@ -23,7 +23,7 @@ def get_final_result(args, docs, data, alpha=2):
         'query_id' : [], 
         'ranked_doc_ids' : [], 
     }
-    br = prepare_bert_result()
+    br = prepare_bert_result(args.test)
     for i in range(len(br)):
         res = br[i]
         test = data[i]
@@ -37,7 +37,7 @@ def get_final_result(args, docs, data, alpha=2):
         rank = sorted(rank, key = lambda s: s[1], reverse = True)
         rank = [r[0] for r in rank]
 
-        output['query_id'].append(data['query_id'])
+        output['query_id'].append(test['query_id'])
         output['ranked_doc_ids'].append(' '.join(rank))
     
     # to csv
@@ -45,7 +45,7 @@ def get_final_result(args, docs, data, alpha=2):
     df.to_csv(f'./ntust-ir2020-homework6/result_{args.test}.csv', index=False)
 
 def test_alpha_by_use_map(args, docs, data):
-    br = prepare_bert_result()
+    br = prepare_bert_result(args.test)
 
     maxAlpha = 5 * 10 + 1
     avgAlpha = 0

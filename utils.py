@@ -8,7 +8,7 @@ def mean_average_precision(resultList, positiveList):
             mAP += seen / (i + 1)
             if seen == len(positiveList):
                 break
-    print(mAP)
+    # print(mAP)
     mAP /= len(positiveList)
     return mAP
 
