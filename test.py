@@ -8,37 +8,69 @@ from data import CorpusSet, collate_fn, get_csv_data
 from model import get_albert_model_and_tokenizer
 from utils import mean_average_precision
 
-# @param resultList dict, element wieth type [document name:str] -> score:float
-# @param testDict   
-def calculate_query_mAP(resultList, testDict, outPath):
-    assert len(resultList) == len(testDict)
+def prepare_bert_result():
+    br = pd.read_csv('./ntust-ir2020-homework6/bert_result.csv', header=0)
+    br = br.to_dict('records')
+    for i in range(len(br)):
+        br[i]['doc_ids'] = br[i]['doc_ids'].split(' ')
+        tmpList = br[i]['doc_scores'].split(' ')
+        br[i]['doc_scores'] = [float(s) for s in tmpList]
+    return br
+  
+def get_final_result(args, docs, test, train, alpha=2):
     mAP = 0
     output = {
         'query_id' : [], 
         'ranked_doc_ids' : [], 
     }
-    for i in range(len(resultList)):
-        doc = resultList[i]
-        test = testDict[i]
-        for j in range(topx):
-            doc[test['bm25_top1000'][j]] += alpha * test['bm25_top1000_scores'][j]
-        # dict to lsit
-        doc = [(key, doc[key]) for key in doc]
+    br = prepare_bert_result()
+    data = train if args.test == 'train' else test
+    for i in range(len(br)):
+        res = br[i]
+        test = data[i]
+        rank = []
+        for j in range(len(test['bm25_top1000'])):
+            rank.append((
+                res['doc_ids'][j],
+                alpha * res['doc_scores'][j] + test['bm25_top1000_scores'][j]
+            ))
         # sort
-        doc = sorted(doc, key = lambda s: s[1], reverse = True)
-        # clamp
-        # doc = doc[:topx]
-        doc = [doc[j][0] for j in range(topx)]
-        mAP += mean_average_precision(doc, test['pos_doc_ids'])
+        rank = sorted(rank, key = lambda s: s[1], reverse = True)
+        rank = [r[0] for r in rank]
 
-        output['query_id'].append(testDict['query_id'])
-        output['ranked_doc_ids'].append(' '.join(doc))
+        output['query_id'].append(data['query_id'])
+        output['ranked_doc_ids'].append(' '.join(rank))
     
-    mAP /= len(resultList)
-    print(f'mAP : {mAP}')
     # to csv
     df = pd.DataFrame(output)
-    df.to_csv(outPath, index=False)
+    df.to_csv('./ntust-ir2020-homework6/result.csv', index=False)
+
+def test_alpha_by_use_map(args, docs, test, train):
+    br = prepare_bert_result()
+    data = train if args.test == 'train' else test
+
+    maxAlpha = 5 * 10 + 1
+    avgAlpha = 0
+    for i in range(len(br)):
+        res = br[i]
+        gt = data[i]
+        # score, list, alpha
+        topRank = [0, 0]
+        for alpha in range(1, maxAlpha):
+            alpha *= 0.1
+            rank = []
+            for j in range(len(res['doc_ids'])):
+                rank.append((res['doc_ids'][j], alpha * res['doc_scores'][j] + gt['bm25_top1000_scores'][j]))
+            rank = sorted(rank, key = lambda s: s[1], reverse = True)
+            rank = [r[0] for r in rank]
+            mAP = mean_average_precision(rank, gt['pos_doc_ids'])
+            if mAP > topRank[2]:
+                topRank[0] = mAP
+                topRank[1] = alpha
+        avgAlpha += topRank[1]
+        print(f'{gt["query_id"]}, map : {topRank[0]}, alpha : {topRank[1]}')
+    print(f'average alpha : {avgAlpha / len(br)}')
+    return 2
 
 def predict_from_model(args, docs, test, train):
     device = torch.device('cuda') if torch.cuda.is_available else torch.device('cpu')
@@ -85,18 +117,12 @@ def get_args():
 if __name__ == '__main__':
     args = get_args()
     docs, test, train = get_csv_data()
+
     if args.model:
         predict_from_model(args, docs, test, train)
+    alpha = 2
+    if args.fit_alpha:
+        alpha = test_alpha_by_use_map(args, docs, test, train)
+    get_final_result(args, docs, test, train, alpha=alpha)
 
-    # alpha = 5
-    # data = train if args.test == 'train' else test
-    # br = pd.read_csv('./ntust-ir2020-homework6/bert_result.csv', header=0)
-    # br = br.to_dict('records')
-    # for i in range(len(br)):
-    #     res = br[i]
-    #     gt = data[i]
-
-
-    if args.map and args.test == 'train':
-        # calculate_query_mAP(br, train, )
-        pass
+    
