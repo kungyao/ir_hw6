@@ -18,11 +18,13 @@ class CorpusSet(Dataset):
             self.querys.append((data[i]['query_id'], data[i]['query_text']))
             if mode=='train':
                 pos_doc_names = data[i]['pos_doc_ids']
-                pos_data_size = len(pos_doc_names)
                 for doc_name in pos_doc_names:
                     self.data.append((i, doc_name, 1))
+                neg_data_size = len(pos_doc_names) * 3
                 neg_doc_names = data[i]['neg_doc_ids']
-                for j in range(pos_data_size):
+                if neg_data_size > len(neg_doc_names):
+                    neg_data_size = len(neg_doc_names)
+                for j in range(neg_data_size):
                     self.data.append((i, neg_doc_names[j], 0))
             else:
                 for doc_name in data[i]['bm25_top1000']:
