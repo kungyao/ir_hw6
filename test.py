@@ -52,7 +52,7 @@ def test_alpha_by_use_map(args, docs, data):
     for i in range(len(br)):
         res = br[i]
         gt = data[i]
-        # score, list, alpha
+        # score, alpha
         topRank = [0, 0]
         for alpha in range(1, maxAlpha):
             alpha *= 0.1
@@ -62,7 +62,7 @@ def test_alpha_by_use_map(args, docs, data):
             rank = sorted(rank, key = lambda s: s[1], reverse = True)
             rank = [r[0] for r in rank]
             mAP = mean_average_precision(rank, gt['pos_doc_ids'])
-            if mAP > topRank[2]:
+            if mAP > topRank[0]:
                 topRank[0] = mAP
                 topRank[1] = alpha
         avgAlpha += topRank[1]
