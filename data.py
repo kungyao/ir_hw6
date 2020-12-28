@@ -59,7 +59,7 @@ class CorpusSet(Dataset):
                 tmp = " "
             # tmp = ''.join([f'TEST_{i}'] * i * (index + 1))
             # i += 1
-            tokenPair.append(self.tokenizer(query, tmp, max_length=512, padding=True))
+            tokenPair.append(self.tokenizer(query, tmp, max_length=512, truncation=True, padding=True))
         return tokenPair, label
 
 def collate_fn(batches):
@@ -173,9 +173,12 @@ if __name__ == '__main__':
     trainset = CorpusSet(tokenizer, docs, train, mode='train')
     trainloader = DataLoader(trainset, batch_size=2, collate_fn=collate_fn)
 
-    data = next(iter(trainloader))
-    print(data)
-    print(data[0].shape)
+    # for i, data in enumerate(trainloader):
+    #     print(data[0].shape)
+
+    # data = next(iter(trainloader))
+    # print(data)
+    # print(data[0].shape)
 
     # from model import get_bert_model_and_tokenizer
     # model, tokenizer = get_bert_model_and_tokenizer(False)
