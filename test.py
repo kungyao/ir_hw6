@@ -97,6 +97,7 @@ def predict_from_model(args, docs, test, train):
             rank[i % topx] = res.logits[0][1].cpu().item()
             if i != 0 and i % thres == 0:
                 ind, qName, _ = testset.get_query_doc_name(i)
+                print(qName)
                 rankStr = [str(r) for r in rank]
                 resultList['query_id'].append(qName)
                 resultList['doc_ids'].append(' '.join(train[ind]['bm25_top1000']))
@@ -110,8 +111,7 @@ def get_args():
     parser.add_argument('-mdl', '--model', default=None, dest='model', help='./models/epoch_0.pth')
     # parser.add_argument('-bs', '--batch_size', type=int, default=1, dest='batch_size')
     parser.add_argument('-test', '--test', type=str, required=True, dest='test')
-    parser.add_argument('-map', '--map', action='store_true')
-    
+    parser.add_argument('-fit_alpha', '--fit_alpha', action='store_true')
     return parser.parse_args()
 
 if __name__ == '__main__':
@@ -123,6 +123,7 @@ if __name__ == '__main__':
     alpha = 2
     if args.fit_alpha:
         alpha = test_alpha_by_use_map(args, docs, test, train)
+    print(alpha)
     get_final_result(args, docs, test, train, alpha=alpha)
 
     
