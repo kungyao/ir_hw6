@@ -17,14 +17,13 @@ def prepare_bert_result():
         br[i]['doc_scores'] = [float(s) for s in tmpList]
     return br
   
-def get_final_result(args, docs, test, train, alpha=2):
+def get_final_result(args, docs, data, alpha=2):
     mAP = 0
     output = {
         'query_id' : [], 
         'ranked_doc_ids' : [], 
     }
     br = prepare_bert_result()
-    data = train if args.test == 'train' else test
     for i in range(len(br)):
         res = br[i]
         test = data[i]
@@ -45,9 +44,8 @@ def get_final_result(args, docs, test, train, alpha=2):
     df = pd.DataFrame(output)
     df.to_csv(f'./ntust-ir2020-homework6/result_{args.test}.csv', index=False)
 
-def test_alpha_by_use_map(args, docs, test, train):
+def test_alpha_by_use_map(args, docs, data):
     br = prepare_bert_result()
-    data = train if args.test == 'train' else test
 
     maxAlpha = 5 * 10 + 1
     avgAlpha = 0
@@ -72,7 +70,7 @@ def test_alpha_by_use_map(args, docs, test, train):
     print(f'average alpha : {avgAlpha / len(br)}')
     return 2
 
-def predict_from_model(args, docs, test, train):
+def predict_from_model(args, docs, data):
     device = torch.device('cuda') if torch.cuda.is_available else torch.device('cpu')
     
     model, tokenizer = get_albert_model_and_tokenizer(ifModel=False)
@@ -81,7 +79,8 @@ def predict_from_model(args, docs, test, train):
     
     topx = 1000
     thres = topx - 1
-    testset = CorpusSet(tokenizer, docs, train, mode='test')
+
+    testset = CorpusSet(tokenizer, docs, data, mode='test')
     testloader = DataLoader(testset, batch_size=1, collate_fn=collate_fn)
 
     rank = [0] * topx
@@ -91,8 +90,8 @@ def predict_from_model(args, docs, test, train):
         'doc_scores'    : [], 
     }
     with torch.no_grad():
-        for i, data in enumerate(testloader):
-            token_ids = data[0].to(device)
+        for i, tt in enumerate(testloader):
+            token_ids = tt[0].to(device)
             res = model(input_ids=token_ids)
             rank[i % topx] = res.logits[0][1].cpu().item()
             if i != 0 and i % thres == 0:
@@ -100,7 +99,7 @@ def predict_from_model(args, docs, test, train):
                 print(qName)
                 rankStr = [str(r) for r in rank]
                 resultList['query_id'].append(qName)
-                resultList['doc_ids'].append(' '.join(train[ind]['bm25_top1000']))
+                resultList['doc_ids'].append(' '.join(data[ind]['bm25_top1000']))
                 resultList['doc_scores'].append(' '.join(rankStr))
                 rank = [0] * topx
     df = pd.DataFrame(resultList)
@@ -117,13 +116,14 @@ def get_args():
 if __name__ == '__main__':
     args = get_args()
     docs, test, train = get_csv_data()
+    data = train if args.test == 'train' else test
 
     if args.model:
-        predict_from_model(args, docs, test, train)
+        predict_from_model(args, docs, data)
     alpha = 2
-    if args.fit_alpha:
-        alpha = test_alpha_by_use_map(args, docs, test, train)
+    if args.fit_alpha and args.test == 'train':
+        alpha = test_alpha_by_use_map(args, docs, data)
     print(alpha)
-    get_final_result(args, docs, test, train, alpha=alpha)
+    get_final_result(args, docs, data, alpha=alpha)
 
     
