@@ -111,6 +111,7 @@ def get_args():
     # parser.add_argument('-bs', '--batch_size', type=int, default=1, dest='batch_size')
     parser.add_argument('-test', '--test', type=str, required=True, dest='test')
     parser.add_argument('-fit_alpha', '--fit_alpha', action='store_true')
+    parser.add_argument('-run_final', '--run_final', action='store_true')
     return parser.parse_args()
 
 if __name__ == '__main__':
@@ -120,10 +121,11 @@ if __name__ == '__main__':
 
     if args.model:
         predict_from_model(args, docs, data)
-    alpha = 2
+    alpha = 1.47
     if args.fit_alpha and args.test == 'train':
         alpha = test_alpha_by_use_map(args, docs, data)
     print(alpha)
-    get_final_result(args, docs, data, alpha=alpha)
+    if args.run_final:
+        get_final_result(args, docs, data, alpha=alpha)
 
     

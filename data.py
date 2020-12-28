@@ -8,7 +8,7 @@ from torch.nn.utils.rnn import pad_sequence
 class CorpusSet(Dataset):
     # @param docs   dictionary type of data, docs[document name] -> document content
     # @param mode   train or test
-    def __init__(self, tokenizer, docs, queryData, topx=1000, mode='train'):
+    def __init__(self, tokenizer, docs, queryData, mode='train'):
         self.docs = docs
         # pair data : query index, doeumet name, label
         self.data = []
