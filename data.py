@@ -59,7 +59,7 @@ class CorpusSet(Dataset):
                 tmp = " "
             # tmp = ''.join([f'TEST_{i}'] * i * (index + 1))
             # i += 1
-            tokenPair.append(tokenizer(query, tmp, max_length=512, padding=True))
+            tokenPair.append(self.tokenizer(query, tmp, max_length=512, padding=True))
         return tokenPair, label
 
 def collate_fn(batches):
