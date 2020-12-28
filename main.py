@@ -56,11 +56,8 @@ if __name__ == '__main__':
             total_loss += res.loss
             # loss = res.loss
             # logits = res.logits
-            if i % print_thres == 0:
-                if i == 0:
-                    print(f'epoch {ep}, batch {i}, loss {total_loss}')
-                else:
-                    print(f'epoch {ep}, batch {i}, loss {total_loss / print_thres}')
+            if (i + 1) % print_thres == 0:
+                print(f'epoch {ep}, batch {i + 1}, loss {total_loss / print_thres}')
                 total_loss = 0
         torch.save(model, os.path.join(args.output, f'epoch_{ep}.mdl'))
 
