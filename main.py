@@ -34,7 +34,7 @@ if __name__ == '__main__':
 
     # construct data loader
     trainset = CorpusSet(tokenizer, docs, train, mode='train')
-    trainloader = DataLoader(trainset, batch_size=args.batch_size, collate_fn=collate_fn)
+    trainloader = DataLoader(trainset, batch_size=args.batch_size, collate_fn=collate_fn, shuffle=True)
 
     print_thres = 100
     model.to(device)

@@ -5,7 +5,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from data import CorpusSet, collate_fn, get_csv_data
-from model import get_albert_model_and_tokenizer
+from model import get_bert_model_and_tokenizer
 from utils import mean_average_precision
 
 def prepare_bert_result(test_type):
@@ -73,7 +73,7 @@ def test_alpha_by_use_map(args, docs, data):
 def predict_from_model(args, docs, data):
     device = torch.device('cuda') if torch.cuda.is_available else torch.device('cpu')
     
-    model, tokenizer = get_albert_model_and_tokenizer(ifModel=False)
+    model, tokenizer = get_bert_model_and_tokenizer(ifModel=False)
     model = torch.load(args.model)
     model.to(device)
     
@@ -93,7 +93,7 @@ def predict_from_model(args, docs, data):
         for i, tt in enumerate(testloader):
             token_ids = tt[0].to(device)
             res = model(input_ids=token_ids)
-            rank[i % topx] = res.logits[0][1].cpu().item()
+            rank[i % topx] = res.logits[0][0].cpu().item()
             if i != 0 and i % thres == 0:
                 ind, qName, _ = testset.get_query_doc_name(i)
                 print(qName)
