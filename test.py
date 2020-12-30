@@ -129,7 +129,7 @@ if __name__ == '__main__':
 
     if args.model:
         predict_from_model(args, docs, data)
-    alpha = 1.6
+    alpha = 2
     if args.fit_alpha and args.test == 'train':
         alpha = test_alpha_by_use_map(args, docs, data)
     print(alpha)
