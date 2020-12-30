@@ -166,12 +166,12 @@ if __name__ == '__main__':
     # print(df.values.tolist())
     # print(dict(df.values.tolist()))
 
-    from torch.utils.data import DataLoader
-    from model import get_bert_model_and_tokenizer
-    model, tokenizer = get_bert_model_and_tokenizer(False)
+    # from torch.utils.data import DataLoader
+    # from model import get_bert_model_and_tokenizer
+    # model, tokenizer = get_bert_model_and_tokenizer(False)
 
-    trainset = CorpusSet(tokenizer, docs, train, mode='train')
-    trainloader = DataLoader(trainset, batch_size=2, collate_fn=collate_fn)
+    # trainset = CorpusSet(tokenizer, docs, train, mode='train')
+    # trainloader = DataLoader(trainset, batch_size=2, collate_fn=collate_fn)
 
     # for i, data in enumerate(trainloader):
     #     print(data[0].shape)
@@ -180,22 +180,22 @@ if __name__ == '__main__':
     # print(data)
     # print(data[0].shape)
 
-    # from model import get_bert_model_and_tokenizer
-    # model, tokenizer = get_bert_model_and_tokenizer(False)
+    from model import get_bert_model_and_tokenizer
+    model, tokenizer = get_bert_model_and_tokenizer(False)
 
     # print(tokenizer.pad_token_id)
     # print(tokenizer.cls_token_id)
     # print(tokenizer.sep_token_id)
 
-    # prompt = "TEST ABC"
-    # choice0 = "TEST_0"
+    prompt = "TEST ABC"
+    choice0 = "TEST_0"
     # choice1 = "TEST_1"
     # choice2 = "TEST_2"
     # choice3 = "TEST_3"
-    # # encoding = tokenizer(prompt, choice0, padding=True)
-    # # encoding = tokenizer([[prompt, prompt], [choice0, choice1]], return_tensors='pt', padding=True)
-    # # print(encoding)
-    # print(tokenizer(prompt, choice0, padding=True))
+    # encoding = tokenizer(prompt, choice0, padding=True)
+    # encoding = tokenizer([[prompt, prompt], [choice0, choice1]], return_tensors='pt', padding=True)
+    # print(encoding)
+    print(tokenizer(prompt, choice0, padding=True))
     # print(tokenizer(prompt, choice1, padding=True))
     # print(tokenizer(prompt, choice2, padding=True))
     # print(tokenizer(prompt, choice3, padding=True))

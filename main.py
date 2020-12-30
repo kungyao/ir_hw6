@@ -9,7 +9,7 @@ from model import get_bert_model_and_tokenizer
 
 def get_args():
     parser = argparse.ArgumentParser(description='', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('-ep', '--epoch', type=int, default=10, dest='epoch')
+    parser.add_argument('-ep', '--epoch', type=int, default=5, dest='epoch')
     parser.add_argument('-bs', '--batch_size', type=int, default=2, dest='batch_size')
     parser.add_argument('-o', '--output', type=str, default='./models', dest='output')
     return parser.parse_args()

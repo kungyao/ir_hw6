@@ -48,27 +48,33 @@ def test_alpha_by_use_map(args, docs, data):
     br = prepare_bert_result(args.test)
 
     maxAlpha = 5 * 10 + 1
-    avgAlpha = 0
-    for i in range(len(br)):
-        res = br[i]
-        gt = data[i]
-        # score, alpha
-        topRank = [0, 0]
-        for alpha in range(1, maxAlpha):
-            alpha *= 0.1
+    fianlAlpha = 0
+    maxmAP = 0
+    mAPList = []
+    for alpha in range(1, maxAlpha):
+        alpha *= 0.1
+        mAPSub = 0
+        subList = []
+        for i in range(len(br)):
+            res = br[i]
+            gt = data[i]
+            #
             rank = []
             for j in range(len(res['doc_ids'])):
                 rank.append((res['doc_ids'][j], alpha * res['doc_scores'][j] + gt['bm25_top1000_scores'][j]))
             rank = sorted(rank, key = lambda s: s[1], reverse = True)
             rank = [r[0] for r in rank]
-            mAP = mean_average_precision(rank, gt['pos_doc_ids'])
-            if mAP > topRank[0]:
-                topRank[0] = mAP
-                topRank[1] = alpha
-        avgAlpha += topRank[1]
-        print(f'{gt["query_id"]}, map : {topRank[0]}, alpha : {topRank[1]}')
-    print(f'average alpha : {avgAlpha / len(br)}')
-    return 2
+
+            tmp = mean_average_precision(rank, gt['pos_doc_ids'])
+            subList.append(tmp)
+            mAPSub += tmp
+        #
+        if mAPSub > maxmAP:
+            maxmAP = mAPSub
+            fianlAlpha = alpha
+            mAPList = subList
+    print(f'average alpha : {fianlAlpha}, mAP : {maxmAP / len(br)}, mAPList : {mAPList}')
+    return fianlAlpha
 
 def predict_from_model(args, docs, data):
     device = torch.device('cuda') if torch.cuda.is_available else torch.device('cpu')
@@ -92,7 +98,9 @@ def predict_from_model(args, docs, data):
     with torch.no_grad():
         for i, tt in enumerate(testloader):
             token_ids = tt[0].to(device)
-            res = model(input_ids=token_ids)
+            token_type_ids = tt[1].to(device)
+            attention_mask = tt[2].to(device)
+            res = model(input_ids=token_ids, token_type_ids=token_type_ids, attention_mask=attention_mask)
             rank[i % topx] = res.logits[0][0].cpu().item()
             if i != 0 and i % thres == 0:
                 ind, qName, _ = testset.get_query_doc_name(i)
@@ -121,7 +129,7 @@ if __name__ == '__main__':
 
     if args.model:
         predict_from_model(args, docs, data)
-    alpha = 1.47
+    alpha = 1.6
     if args.fit_alpha and args.test == 'train':
         alpha = test_alpha_by_use_map(args, docs, data)
     print(alpha)
