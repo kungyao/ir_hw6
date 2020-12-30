@@ -26,10 +26,10 @@ if __name__ == '__main__':
     encoding = tokenizer([[prompt, prompt], [choice0, choice1]], padding=True)
 
     testSingle = {
-        'input_ids'         : torch.tensor([[encoding['input_ids'][0]]]).to(device),
-        'token_type_ids'    : torch.tensor([[encoding['token_type_ids'][0]]]).to(device),
-        'attention_mask'    : torch.tensor([[encoding['attention_mask'][0]]]).to(device),
-        'labels'            : torch.tensor([0]).to(device),
+        'input_ids'         : torch.tensor([[encoding['input_ids'][0]], [encoding['input_ids'][1]]]).to(device),
+        'token_type_ids'    : torch.tensor([[encoding['token_type_ids'][0]], [encoding['token_type_ids'][1]]]).to(device),
+        'attention_mask'    : torch.tensor([[encoding['attention_mask'][0]], [encoding['attention_mask'][1]]]).to(device),
+        'labels'            : torch.tensor([0, 0]).to(device),
     }
 
     print(testSingle['input_ids'].shape)
@@ -75,5 +75,5 @@ if __name__ == '__main__':
     # to single data
     print('single test')
     with torch.no_grad():
-        print(model(input_ids=testSingle['input_ids'], token_type_ids=testSingle['token_type_ids'], attention_mask=testSingle['attention_mask'], labels=testSingle['labels']))
+        print(model(input_ids=testSingle['input_ids'], token_type_ids=testSingle['token_type_ids'], attention_mask=testSingle['attention_mask']))
     

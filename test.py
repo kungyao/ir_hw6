@@ -84,8 +84,6 @@ def predict_from_model(args, docs, data):
     model.to(device)
     
     topx = 1000
-    thres = topx - 1
-
     testset = CorpusSet(tokenizer, docs, data, mode='test')
     testloader = DataLoader(testset, batch_size=1, collate_fn=collate_fn)
 
@@ -102,7 +100,7 @@ def predict_from_model(args, docs, data):
             attention_mask = tt[2].to(device)
             res = model(input_ids=token_ids, token_type_ids=token_type_ids, attention_mask=attention_mask)
             rank[i % topx] = res.logits[0][0].cpu().item()
-            if i != 0 and i % thres == 0:
+            if (i + 1) % topx == 0:
                 ind, qName, _ = testset.get_query_doc_name(i)
                 print(qName)
                 rankStr = [str(r) for r in rank]
