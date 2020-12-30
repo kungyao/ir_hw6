@@ -8,63 +8,28 @@ from torch.nn.utils.rnn import pad_sequence
 class CorpusSet(Dataset):
     # @param docs   dictionary type of data, docs[document name] -> document content
     # @param mode   train or test
-    def __init__(self, tokenizer, docs, queryData, negSize=3, mode='train'):
-        self.docs = docs
+    def __init__(self, data, mode='train'):
         # pair data : query index, doeumet name, label
-        self.data = []
-        data = queryData
-        self.querys = []
-        self.negSize = negSize
-        for i in range(len(data)):
-            self.querys.append((data[i]['query_id'], data[i]['query_text']))
-            if mode=='train':
-                pos_doc_names = data[i]['pos_doc_ids']
-                offset = 0
-                neg_doc_names = data[i]['neg_doc_ids']
-                neg_data_size = len(neg_doc_names)
-                for doc_name in pos_doc_names:
-                    # query index, pos doc, neg doc * n
-                    subdata = [i, doc_name]
-                    for j in range(offset, offset + negSize):
-                        subdata.append(neg_doc_names[j%neg_data_size])
-                    offset += negSize
-                    offset %= neg_data_size
-                    self.data.append(subdata)
-            else:
-                for doc_name in data[i]['bm25_top1000']:
-                    self.data.append([i, doc_name])
+        self.data = data
         self.len = len(self.data)
         self.mode = mode
-        self.tokenizer = tokenizer
     def __len__(self):
         return self.len
     def get_query_doc_name(self, index):
-        qIdx, docName = self.data[index][:2]
-        return qIdx, self.querys[qIdx][0], docName
+        qIdx = self.data[index]['query_index']
+        qName = self.data[index]['query_id']
+        docName = self.data[index]['doc_id']
+        if len(docName) == 1:
+            docName = docName[0]
+        return qIdx, qName, docName
     def __getitem__(self, index):
         data = self.data[index]
-        qIdx = data[0]
-        docs = data[1:]
-        if self.mode=='train':
-            label = 0
-        else:
-            label = None
-        query = self.querys[qIdx][1]
-        # query = "TEST ABC"
-        tokenPair = []
-        # i = 0
-        for doc in docs:
-            tmp = self.docs[doc]
-            if type(tmp) == float and math.isnan(tmp):
-                tmp = " "
-            # tmp = ''.join([f'TEST_{i}'] * i * (index + 1))
-            # i += 1
-            tokenPair.append(self.tokenizer(query, tmp, max_length=512, truncation=True, padding=True))
-        return tokenPair, label
+        label = 0 if self.mode=='train' else None
+        return data, label
 
 def collate_fn(batches):
     batchSize = len(batches)
-    choiceSize = len(batches[0][0])
+    choiceSize = len(batches[0][0]['input_ids'])
     token_ids = []
     token_type_ids = []
     attention_mask = []
@@ -75,10 +40,13 @@ def collate_fn(batches):
         labels = None
 
     for b in batches:
-        for item in b[0]:
-            token_ids.append(torch.tensor(item['input_ids']))
-            token_type_ids.append(torch.tensor(item['token_type_ids']))
-            attention_mask.append(torch.tensor(item['attention_mask']))
+        data = b[0]
+        for item in data['input_ids']:
+            token_ids.append(torch.tensor(item))
+        for item in data['token_type_ids']:
+            token_type_ids.append(torch.tensor(item))
+        for item in data['attention_mask']:
+            attention_mask.append(torch.tensor(item))
 
     token_ids = pad_sequence(token_ids, batch_first=True)
     token_type_ids = pad_sequence(token_type_ids, batch_first=True)
@@ -89,31 +57,6 @@ def collate_fn(batches):
     attention_mask = torch.reshape(attention_mask, (batchSize, choiceSize, -1))
 
     return (token_ids, token_type_ids, attention_mask, labels)
-
-# @brief generate negative from all document that do not in positive doc
-# @param doc    document csv data
-# @param train  training csv data
-def generate_negative_data(doc, train):
-    doc_ids = doc.to_dict('list')['doc_id']
-    neg_dic = {
-        'query_id' : [], 
-        'neg_doc_ids' : [], 
-    }
-    keys = train.keys()
-    rows, _ = train.shape
-    for i in range(rows):
-        neg_dic['query_id'].append(train['query_id'][i])
-        neg_docs = doc_ids.copy()
-        # print(len(neg_docs))
-        pos_list = train['pos_doc_ids'][i].split(' ')
-        # print(len(pos_list))
-        for pos_doc in pos_list:
-            neg_docs.remove(pos_doc)
-        # print(len(neg_docs))
-        neg_dic['neg_doc_ids'].append(" ".join(neg_docs))
-    
-    df = pd.DataFrame(neg_dic)
-    df.to_csv('./ntust-ir2020-homework6/negative_data.csv', index=False)
 
 # pandas usage
 # https://stackoverflow.com/questions/26716616/convert-a-pandas-dataframe-to-a-dictionary
@@ -156,46 +99,127 @@ def get_csv_data():
         train[i]['neg_doc_ids'] = [name for name in train[i]['bm25_top1000'] if name not in train[i]['pos_doc_ids']]
     return docs, test, train
 
-if __name__ == '__main__':
-    docs, test, train = get_csv_data()
+def my_tokenize(query_token_ids, tokenizer, max_length, docs, doc_name, doc_token_ids_lsit):
+    if doc_name not in doc_token_ids_lsit:
+        content = docs[doc_name]
+        if type(content) == float and math.isnan(content):
+            content = " "
+        docToken = tokenizer.tokenize(content)
+        doc_token_ids = tokenizer.convert_tokens_to_ids(docToken)
+        doc_token_ids_lsit[doc_name] = doc_token_ids
+    else:
+        doc_token_ids = doc_token_ids_lsit[doc_name]
+    input_ids = query_token_ids + doc_token_ids
+    # token_type_ids
+    token_type_ids = [0 for token_id in query_token_ids]
+    token_type_ids.extend(1 for token_id in doc_token_ids)
+    # clamp to specific size
+    if len(input_ids) >= max_length:
+        input_ids = input_ids[:max_length-1]
+        token_type_ids = token_type_ids[:max_length-1]
+    # add seperate token
+    input_ids.append(tokenizer.sep_token_id)
+    token_type_ids.append(tokenizer.sep_token_id)
+    attention_mask = [1 for token_id in input_ids]
+    return input_ids, token_type_ids, attention_mask, doc_token_ids_lsit
 
-    # generate_negative_data(docs, train)
-    
+# collect data 
+def preprocess_df(docs, test, train, tokenizer, negSize=3, max_length=512):
+    doc_token_ids_lsit = {}
+    testNew = []
+    if test is not None:
+        print(f'process test data')
+        for i in range(len(test)):
+            queryToken = tokenizer.tokenize(test[i]['query_text'])
+            query_token_ids = tokenizer.convert_tokens_to_ids(queryToken)
+            query_token_ids.insert(0, tokenizer.cls_token_id)
+            query_token_ids.append(tokenizer.sep_token_id)
+            for tp in test[i]['bm25_top1000']:
+                input_ids, token_type_ids, attention_mask, doc_token_ids_lsit = my_tokenize(
+                    query_token_ids,
+                    tokenizer,
+                    max_length,
+                    docs,
+                    tp,
+                    doc_token_ids_lsit
+                )
+                subTest = {
+                    'query_index'       : i,
+                    'query_id'          : test[i]['query_id'],
+                    'doc_id'            : [tp],
+                    'input_ids'         : [torch.tensor(input_ids)],
+                    'token_type_ids'    : [torch.tensor(token_type_ids)],
+                    'attention_mask'    : [torch.tensor(attention_mask)],
+                }
+                testNew.append(subTest)
+        print(f'process test data finish')
+    trainNew = []
+    if train is not None:
+        print(f'process train data')
+        for i in range(len(train)):
+            queryToken = tokenizer.tokenize(train[i]['query_text'])
+            query_token_ids = tokenizer.convert_tokens_to_ids(queryToken)
+            query_token_ids.insert(0, tokenizer.cls_token_id)
+            query_token_ids.append(tokenizer.sep_token_id)
+            neg_doc_names = train[i]['neg_doc_ids']
+            offset = 0
+            for tp in train[i]['bm25_top1000']:
+                input_ids, token_type_ids, attention_mask, doc_token_ids_lsit = my_tokenize(
+                    query_token_ids,
+                    tokenizer,
+                    max_length,
+                    docs,
+                    tp,
+                    doc_token_ids_lsit
+                )
+                subTrain = {
+                    'query_index'       : i,
+                    'query_id'          : train[i]['query_id'],
+                    'doc_id'            : [tp],
+                    'input_ids'         : [torch.tensor(input_ids)],
+                    'token_type_ids'    : [torch.tensor(token_type_ids)],
+                    'attention_mask'    : [torch.tensor(attention_mask)],
+                }
+                for j in range(offset, offset+negSize):
+                    name = neg_doc_names[j%len(neg_doc_names)]
+                    input_ids, token_type_ids, attention_mask, doc_token_ids_lsit = my_tokenize(
+                        query_token_ids,
+                        tokenizer,
+                        max_length,
+                        docs,
+                        name,
+                        doc_token_ids_lsit
+                    )
+                    subTrain['doc_id'].append(name)
+                    subTrain['input_ids'].append(torch.tensor(input_ids))
+                    subTrain['token_type_ids'].append(torch.tensor(token_type_ids))
+                    subTrain['attention_mask'].append(torch.tensor(attention_mask))
+                offset += negSize
+                if offset >= len(neg_doc_names):
+                    offset %= len(neg_doc_names)
+                trainNew.append(subTrain)
+        print(f'process train data finish')
+    return testNew, trainNew
+
+if __name__ == '__main__':
     # df = pd.DataFrame({'a': ['red', 'yellow', 'blue'], 'b': [0.5, 0.25, 0.125]})
     # print(df.values)
     # print(df.values.tolist())
     # print(dict(df.values.tolist()))
 
-    # from torch.utils.data import DataLoader
-    # from model import get_bert_model_and_tokenizer
-    # model, tokenizer = get_bert_model_and_tokenizer(False)
-
-    # trainset = CorpusSet(tokenizer, docs, train, mode='train')
-    # trainloader = DataLoader(trainset, batch_size=2, collate_fn=collate_fn)
-
-    # for i, data in enumerate(trainloader):
-    #     print(data[0].shape)
-
-    # data = next(iter(trainloader))
-    # print(data)
-    # print(data[0].shape)
-
+    from torch.utils.data import DataLoader
     from model import get_bert_model_and_tokenizer
     model, tokenizer = get_bert_model_and_tokenizer(False)
 
-    # print(tokenizer.pad_token_id)
-    # print(tokenizer.cls_token_id)
-    # print(tokenizer.sep_token_id)
+    docs, test, train = get_csv_data()
+    newTest, newTrain = preprocess_df(docs, test, train, tokenizer)
 
-    prompt = "TEST ABC"
-    choice0 = "TEST_0"
-    # choice1 = "TEST_1"
-    # choice2 = "TEST_2"
-    # choice3 = "TEST_3"
-    # encoding = tokenizer(prompt, choice0, padding=True)
-    # encoding = tokenizer([[prompt, prompt], [choice0, choice1]], return_tensors='pt', padding=True)
-    # print(encoding)
-    print(tokenizer(prompt, choice0, padding=True))
-    # print(tokenizer(prompt, choice1, padding=True))
-    # print(tokenizer(prompt, choice2, padding=True))
-    # print(tokenizer(prompt, choice3, padding=True))
+    trainset = CorpusSet(newTrain, mode='train')
+    trainloader = DataLoader(trainset, batch_size=1, collate_fn=collate_fn)
+
+    for i, data in enumerate(trainloader):
+        break
+
+    data = next(iter(trainloader))
+    print(data)
+    print(data[0].shape)

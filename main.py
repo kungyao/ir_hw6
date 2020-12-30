@@ -4,7 +4,7 @@ import argparse
 import torch
 from torch.utils.data import DataLoader
 
-from data import CorpusSet, collate_fn, get_csv_data
+from data import CorpusSet, collate_fn, get_csv_data, preprocess_df
 from model import get_bert_model_and_tokenizer
 
 def get_args():
@@ -24,7 +24,7 @@ if __name__ == '__main__':
     print(f'Use {device} to training')
 
     # load data
-    docs, test, train = get_csv_data()
+    docs, _, train = get_csv_data()
 
     # get model
     model, tokenizer = get_bert_model_and_tokenizer()
@@ -33,7 +33,8 @@ if __name__ == '__main__':
     scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=3, gamma=0.1)
 
     # construct data loader
-    trainset = CorpusSet(tokenizer, docs, train, mode='train')
+    _, train = preprocess_df(docs, None, train, tokenizer)
+    trainset = CorpusSet(train, mode='train')
     trainloader = DataLoader(trainset, batch_size=args.batch_size, collate_fn=collate_fn, shuffle=True)
 
     print_thres = 100

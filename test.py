@@ -4,7 +4,7 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader
 
-from data import CorpusSet, collate_fn, get_csv_data
+from data import CorpusSet, collate_fn, get_csv_data, preprocess_df
 from model import get_bert_model_and_tokenizer
 from utils import mean_average_precision
 
@@ -76,15 +76,23 @@ def test_alpha_by_use_map(args, docs, data):
     print(f'average alpha : {fianlAlpha}, mAP : {maxmAP / len(br)}, mAPList : {mAPList}')
     return fianlAlpha
 
-def predict_from_model(args, docs, data):
+def predict_from_model(args, docs, test, train):
     device = torch.device('cuda') if torch.cuda.is_available else torch.device('cpu')
     
     model, tokenizer = get_bert_model_and_tokenizer(ifModel=False)
     model = torch.load(args.model)
     model.to(device)
+
+    if args.test == 'train':
+        data = train
+        _, newTrain = preprocess_df(docs, None, train, tokenizer)
+        testset = CorpusSet(newTrain, mode='test')
+    else:
+        data = test
+        newTest, _ = preprocess_df(docs, test, None, tokenizer)
+        testset = CorpusSet(newTest, mode='test')
     
     topx = 1000
-    testset = CorpusSet(tokenizer, docs, data, mode='test')
     testloader = DataLoader(testset, batch_size=1, collate_fn=collate_fn)
 
     rank = [0] * topx
@@ -123,11 +131,10 @@ def get_args():
 if __name__ == '__main__':
     args = get_args()
     docs, test, train = get_csv_data()
-    data = train if args.test == 'train' else test
-
     if args.model:
-        predict_from_model(args, docs, data)
+        predict_from_model(args, docs, test, train)
     alpha = 2
+    data = train if args.test == 'train' else test
     if args.fit_alpha and args.test == 'train':
         alpha = test_alpha_by_use_map(args, docs, data)
     print(alpha)
