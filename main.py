@@ -33,7 +33,7 @@ if __name__ == '__main__':
     scheduler = torch.optim.lr_scheduler.StepLR(optim, step_size=3, gamma=0.1)
 
     # construct data loader
-    _, train = preprocess_df(docs, None, train, tokenizer)
+    _, train = preprocess_df(docs, None, train, tokenizer, mode='train')
     trainset = CorpusSet(train, mode='train')
     trainloader = DataLoader(trainset, batch_size=args.batch_size, collate_fn=collate_fn, shuffle=True)
 

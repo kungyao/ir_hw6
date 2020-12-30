@@ -85,11 +85,11 @@ def predict_from_model(args, docs, test, train):
 
     if args.test == 'train':
         data = train
-        _, newTrain = preprocess_df(docs, None, train, tokenizer)
+        _, newTrain = preprocess_df(docs, None, train, tokenizer, mode='test')
         testset = CorpusSet(newTrain, mode='test')
     else:
         data = test
-        newTest, _ = preprocess_df(docs, test, None, tokenizer)
+        newTest, _ = preprocess_df(docs, test, None, tokenizer, mode='test')
         testset = CorpusSet(newTest, mode='test')
     
     topx = 1000

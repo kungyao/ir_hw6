@@ -106,6 +106,8 @@ def my_tokenize(query_token_ids, tokenizer, max_length, docs, doc_name, doc_toke
             content = " "
         docToken = tokenizer.tokenize(content)
         doc_token_ids = tokenizer.convert_tokens_to_ids(docToken)
+        if len(doc_token_ids) > max_length:
+            doc_token_ids = doc_token_ids[:max_length]
         doc_token_ids_lsit[doc_name] = doc_token_ids
     else:
         doc_token_ids = doc_token_ids_lsit[doc_name]
@@ -124,12 +126,13 @@ def my_tokenize(query_token_ids, tokenizer, max_length, docs, doc_name, doc_toke
     return input_ids, token_type_ids, attention_mask, doc_token_ids_lsit
 
 # collect data 
-def preprocess_df(docs, test, train, tokenizer, negSize=3, max_length=512):
+def preprocess_df(docs, test, train, tokenizer, mode='test', negSize=3, max_length=512):
     doc_token_ids_lsit = {}
     testNew = []
     if test is not None:
         print(f'process test data')
         for i in range(len(test)):
+            print(test[i]['query_id'])
             queryToken = tokenizer.tokenize(test[i]['query_text'])
             query_token_ids = tokenizer.convert_tokens_to_ids(queryToken)
             query_token_ids.insert(0, tokenizer.cls_token_id)
@@ -157,6 +160,7 @@ def preprocess_df(docs, test, train, tokenizer, negSize=3, max_length=512):
     if train is not None:
         print(f'process train data')
         for i in range(len(train)):
+            print(train[i]['query_id'])
             queryToken = tokenizer.tokenize(train[i]['query_text'])
             query_token_ids = tokenizer.convert_tokens_to_ids(queryToken)
             query_token_ids.insert(0, tokenizer.cls_token_id)
@@ -180,23 +184,24 @@ def preprocess_df(docs, test, train, tokenizer, negSize=3, max_length=512):
                     'token_type_ids'    : [torch.tensor(token_type_ids)],
                     'attention_mask'    : [torch.tensor(attention_mask)],
                 }
-                for j in range(offset, offset+negSize):
-                    name = neg_doc_names[j%len(neg_doc_names)]
-                    input_ids, token_type_ids, attention_mask, doc_token_ids_lsit = my_tokenize(
-                        query_token_ids,
-                        tokenizer,
-                        max_length,
-                        docs,
-                        name,
-                        doc_token_ids_lsit
-                    )
-                    subTrain['doc_id'].append(name)
-                    subTrain['input_ids'].append(torch.tensor(input_ids))
-                    subTrain['token_type_ids'].append(torch.tensor(token_type_ids))
-                    subTrain['attention_mask'].append(torch.tensor(attention_mask))
-                offset += negSize
-                if offset >= len(neg_doc_names):
-                    offset %= len(neg_doc_names)
+                if mode=='train':
+                    for j in range(offset, offset+negSize):
+                        name = neg_doc_names[j%len(neg_doc_names)]
+                        input_ids, token_type_ids, attention_mask, doc_token_ids_lsit = my_tokenize(
+                            query_token_ids,
+                            tokenizer,
+                            max_length,
+                            docs,
+                            name,
+                            doc_token_ids_lsit
+                        )
+                        subTrain['doc_id'].append(name)
+                        subTrain['input_ids'].append(torch.tensor(input_ids))
+                        subTrain['token_type_ids'].append(torch.tensor(token_type_ids))
+                        subTrain['attention_mask'].append(torch.tensor(attention_mask))
+                    offset += negSize
+                    if offset >= len(neg_doc_names):
+                        offset %= len(neg_doc_names)
                 trainNew.append(subTrain)
         print(f'process train data finish')
     return testNew, trainNew
